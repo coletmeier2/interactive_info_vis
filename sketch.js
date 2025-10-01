@@ -22,7 +22,7 @@ function draw() {
     background("lightblue"); // blue if above horizon
     
   } else {
-    background("grey"); // grey if below horizon
+    background("purple"); // grey if below horizon
   }
 
   //sun
