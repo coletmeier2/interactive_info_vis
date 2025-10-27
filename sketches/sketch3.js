@@ -53,6 +53,7 @@ registerSketch('sk3', function (p) {
     var begin = p.width / 20;
     var end = (p.width / 20) * 19;
 
+    // ...existing code...
     // Hour Line
     var hX = begin + (h / 23 * (end - begin));
     var hY = p.height / 4;
@@ -62,16 +63,65 @@ registerSketch('sk3', function (p) {
     p.textSize(50);
     p.text(p.nf(h, 2), hX - 30, hY - 40);
 
-    p.strokeWeight(20);
-    p.stroke('#413a49ff');
+    // Asparagus-style hour line (24 segments)
+    var asparagusLeft = begin + 8;
+    var asparagusRight = end - 8;
+    var asparagusW = asparagusRight - asparagusLeft;
+    var totalAsparagus = 24;               // <- changed to 24 segments
+    var segW_H = asparagusW / totalAsparagus;
+    var segRadiusH = Math.max(6, p.width * 0.006);
+    var segH_H = Math.max(24, p.width * 0.015);
+
+    // subtle guide under stalk
+    p.strokeWeight(12);
+    p.stroke('#43523b');
     p.line(end, hY, begin, hY);
 
-    p.stroke('#bf9fe1ff');
-    p.ellipse(hX, hY, 30, 30);
+    // draw segmented stalk pieces with small bud at top for each segment
+    for (var i = 0; i < totalAsparagus; i++) {
+      var segX = asparagusLeft + i * segW_H;
+      // slight color variation along the stalk
+      var t = i / Math.max(1, totalAsparagus - 1);
+      var colA = p.color('#6bb24a');
+      var colB = p.color('#3b8f2e');
+      var stalkCol = p.lerpColor(colA, colB, t * 0.6);
 
-    p.strokeWeight(10);
-    p.fill('white');
-    p.ellipse(hX, hY, 20, 20);
+      p.noStroke();
+      p.fill(stalkCol);
+      p.rect(segX, hY - segH_H / 2, segW_H - 1, segH_H, segRadiusH);
+
+      // darker top stripe for a ridged look
+      p.fill('#4a8a2e');
+      p.rect(segX, hY - segH_H / 2, segW_H - 1, Math.max(4, segH_H / 3), segRadiusH);
+
+      // small bud/node at the top of each segment
+      p.fill('#2f7a2a');
+      p.ellipse(segX + segW_H * 0.5, hY - segH_H * 0.6, segW_H * 0.9, segH_H * 0.45);
+    }
+
+    // show "cuts" / separators according to hour (map 24h -> 24 segments)
+    var choppedH = h % 24;
+    if (choppedH === 0) choppedH = 24; // show full set at 0 (midnight) for clarity
+    var sepWH = Math.max(3, segW_H * 0.16);
+    for (var j = 1; j <= choppedH; j++) {
+      var sepXH = asparagusLeft + j * segW_H - sepWH / 2;
+      p.noStroke();
+      p.fill(plankColorAtX(sepXH));
+      p.rect(sepXH, hY - segH_H / 2, sepWH, segH_H, 2);
+      // thin highlight line on each cut
+      p.stroke('#dfeade');
+      p.strokeWeight(1.8);
+      p.line(sepXH + sepWH / 2, hY - segH_H / 2 + 2, sepXH + sepWH / 2, hY + segH_H / 2 - 2);
+      p.noStroke();
+    }
+
+    // tip cluster on the right end
+    p.noStroke();
+    p.fill('#2f7a2a');
+    p.triangle(asparagusRight + 6, hY, asparagusRight + 28, hY - segH_H * 0.6, asparagusRight + 28, hY + segH_H * 0.6);
+    p.fill('#3b8f2e');
+    p.triangle(asparagusRight + 6, hY, asparagusRight + 20, hY - segH_H * 0.35, asparagusRight + 20, hY + segH_H * 0.35);
+    // ...existing code...
 
     // Minute Line
     var mX = begin + (m / 59 * (end - begin));
@@ -92,13 +142,13 @@ registerSketch('sk3', function (p) {
     var carrotLeft = begin + 8;
     var carrotRight = end - 8;
     var carrotW = carrotRight - carrotLeft;
-  // make carrot noticeably thicker: larger min/max and multiplier
-  var carrotH = Math.max(24, p.min(80, p.width * 0.015)); // responsive height (thicker)
+    // make carrot noticeably thicker: larger min/max and multiplier
+    var carrotH = Math.max(24, p.min(80, p.width * 0.015)); // responsive height (thicker)
 
     // Draw carrot segments across the shaft so minute cuts can be shown (60 segments)
     var totalSegmentsC = 60;
     var segWc = carrotW / totalSegmentsC;
-  var segRadiusC = Math.max(6, carrotH * 0.45);
+    var segRadiusC = Math.max(6, carrotH * 0.45);
     var segHc = carrotH + 8;
 
     // base orange shaft (draw segments to allow 'cut' reveals)
@@ -116,20 +166,20 @@ registerSketch('sk3', function (p) {
     // Draw tapered point at the right end (triangle overlay)
     p.noStroke();
     p.fill('#e36f16');
-  p.triangle(carrotRight + 6, mY, carrotRight + 44, mY - carrotH * 0.6, carrotRight + 44, mY + carrotH * 0.6);
-  // small highlight on the tip (wider)
-  p.fill('#ff9b39');
-  p.triangle(carrotRight + 6, mY, carrotRight + 28, mY - carrotH * 0.25, carrotRight + 28, mY + carrotH * 0.25);
+    p.triangle(carrotRight + 6, mY, carrotRight + 44, mY - carrotH * 0.6, carrotRight + 44, mY + carrotH * 0.6);
+    // small highlight on the tip (wider)
+    p.fill('#ff9b39');
+    p.triangle(carrotRight + 6, mY, carrotRight + 28, mY - carrotH * 0.25, carrotRight + 28, mY + carrotH * 0.25);
 
     // leafy top (left)
     p.noStroke();
-  // larger leafy top to match thicker carrot
-  p.fill('#3f8b2e');
-  p.ellipse(carrotLeft - 8, mY - carrotH * 0.45, carrotH * 1.4, carrotH * 0.9);
-  p.fill('#2f7a2a');
-  p.ellipse(carrotLeft - 2, mY - carrotH * 1.15, carrotH * 1.6, carrotH * 1.0);
-  p.fill('#4aa63a');
-  p.ellipse(carrotLeft + 12, mY - carrotH * 0.8, carrotH * 1.2, carrotH * 0.85);
+    // larger leafy top to match thicker carrot
+    p.fill('#3f8b2e');
+    p.ellipse(carrotLeft - 8, mY - carrotH * 0.45, carrotH * 1.4, carrotH * 0.9);
+    p.fill('#2f7a2a');
+    p.ellipse(carrotLeft - 2, mY - carrotH * 1.15, carrotH * 1.6, carrotH * 1.0);
+    p.fill('#4aa63a');
+    p.ellipse(carrotLeft + 12, mY - carrotH * 0.8, carrotH * 1.2, carrotH * 0.85);
 
     // Show cuts based on current minute by revealing board color between segments
     var choppedC = m; // number of cuts equals current minute (0..59)
@@ -145,14 +195,6 @@ registerSketch('sk3', function (p) {
       p.line(sepXc + sepWc / 2, mY - segHc / 2 + 2, sepXc + sepWc / 2, mY + segHc / 2 - 2);
       p.noStroke();
     }
-
-    // small circular badge marking current minute position (keeps previous UI anchor)
-    p.stroke('#bf9fe1ff');
-    p.strokeWeight(10);
-    p.ellipse(mX, mY, 30, 30);
-    p.strokeWeight(6);
-    p.fill('white');
-    p.ellipse(mX, mY, 20, 20);
 
     // Second Line (green onion)
     var sX = begin + (s / 59 * (end - begin));
