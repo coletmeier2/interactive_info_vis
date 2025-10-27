@@ -82,14 +82,75 @@ registerSketch('sk3', function (p) {
     p.textSize(50);
     p.text(p.nf(m, 2), mX - 30, mY - 40);
 
-    p.strokeWeight(20);
-    p.stroke('#413a49ff');
+    // Draw carrot minute hand (horizontal, like a carrot on the board)
+    // guide line (subtle) under the carrot
+    p.strokeWeight(12);
+    p.stroke('#b8864fff');
     p.line(end, mY, begin, mY);
 
-    p.stroke('#bf9fe1ff');
-    p.ellipse(mX, mY, 30, 30);
+    // Carrot layout
+    var carrotLeft = begin + 8;
+    var carrotRight = end - 8;
+    var carrotW = carrotRight - carrotLeft;
+  // make carrot noticeably thicker: larger min/max and multiplier
+  var carrotH = Math.max(24, p.min(80, p.width * 0.015)); // responsive height (thicker)
 
+    // Draw carrot segments across the shaft so minute cuts can be shown (60 segments)
+    var totalSegmentsC = 60;
+    var segWc = carrotW / totalSegmentsC;
+  var segRadiusC = Math.max(6, carrotH * 0.45);
+    var segHc = carrotH + 8;
+
+    // base orange shaft (draw segments to allow 'cut' reveals)
+    for (var i = 0; i < totalSegmentsC; i++) {
+      var segX = carrotLeft + i * segWc;
+      // main body orange
+      p.noStroke();
+      p.fill('#f18b2b'); // carrot orange
+      p.rect(segX, mY - segHc / 2, segWc - 1, segHc, segRadiusC);
+      // top shading stripe
+      p.fill('#ec9538');
+      p.rect(segX, mY - segHc / 2, segWc - 1, Math.max(3, segHc / 3), segRadiusC);
+    }
+
+    // Draw tapered point at the right end (triangle overlay)
+    p.noStroke();
+    p.fill('#e36f16');
+  p.triangle(carrotRight + 6, mY, carrotRight + 44, mY - carrotH * 0.6, carrotRight + 44, mY + carrotH * 0.6);
+  // small highlight on the tip (wider)
+  p.fill('#ff9b39');
+  p.triangle(carrotRight + 6, mY, carrotRight + 28, mY - carrotH * 0.25, carrotRight + 28, mY + carrotH * 0.25);
+
+    // leafy top (left)
+    p.noStroke();
+  // larger leafy top to match thicker carrot
+  p.fill('#3f8b2e');
+  p.ellipse(carrotLeft - 8, mY - carrotH * 0.45, carrotH * 1.4, carrotH * 0.9);
+  p.fill('#2f7a2a');
+  p.ellipse(carrotLeft - 2, mY - carrotH * 1.15, carrotH * 1.6, carrotH * 1.0);
+  p.fill('#4aa63a');
+  p.ellipse(carrotLeft + 12, mY - carrotH * 0.8, carrotH * 1.2, carrotH * 0.85);
+
+    // Show cuts based on current minute by revealing board color between segments
+    var choppedC = m; // number of cuts equals current minute (0..59)
+    var sepWc = Math.max(2, segWc * 0.16);
+    for (var j = 1; j <= choppedC; j++) {
+      var sepXc = carrotLeft + j * segWc - sepWc / 2;
+      p.noStroke();
+      p.fill(plankColorAtX(sepXc));
+      p.rect(sepXc, mY - segHc / 2, sepWc, segHc, 2);
+      // thin cut line for emphasis
+      p.stroke('#f6e8d6');
+      p.strokeWeight(1.8);
+      p.line(sepXc + sepWc / 2, mY - segHc / 2 + 2, sepXc + sepWc / 2, mY + segHc / 2 - 2);
+      p.noStroke();
+    }
+
+    // small circular badge marking current minute position (keeps previous UI anchor)
+    p.stroke('#bf9fe1ff');
     p.strokeWeight(10);
+    p.ellipse(mX, mY, 30, 30);
+    p.strokeWeight(6);
     p.fill('white');
     p.ellipse(mX, mY, 20, 20);
 
@@ -178,4 +239,3 @@ registerSketch('sk3', function (p) {
 
   p.windowResized = function () { p.resizeCanvas(p.windowWidth, p.windowHeight); };
 });
-// ...existing code...
