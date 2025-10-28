@@ -1,11 +1,11 @@
-// New sketch: steak cooker — 3 minute timer with flip indicator; center gets less pink over time
+// Steak Cooking Clock — 3 Minute Timer with Flip Indicator and Grill Background
 registerSketch('sk4', function (p) {
   let running = false;
   let startMillis = 0;
-  let elapsedOffset = 0; // seconds accumulated while paused
-  let flipped = false; // user can mark flipped (optional)
-  const totalSec = 180; // 3 minutes total
-  const flipSec = totalSec / 2; // indicate flip at halfway (90s)
+  let elapsedOffset = 0;
+  let flipped = false;
+  const totalSec = 60 * 8; // 3 minutes
+  const flipSec = totalSec / 2; // halfway mark
 
   p.setup = function () {
     p.createCanvas(900, 640);
@@ -14,13 +14,16 @@ registerSketch('sk4', function (p) {
   };
 
   p.draw = function () {
-    p.background('#efe7df'); // kitchen counter
+    p.background('#3b2f2a'); // grill base
+    drawGrill();
     drawHeader();
+
     const elapsed = getElapsedSec();
     drawSteak(elapsed);
     drawFooter(elapsed);
   };
 
+  // --- Helper: Time Management ---
   function getElapsedSec() {
     if (running) {
       return p.constrain((p.millis() - startMillis) / 1000 + elapsedOffset, 0, totalSec);
@@ -28,8 +31,8 @@ registerSketch('sk4', function (p) {
     return p.constrain(elapsedOffset, 0, totalSec);
   }
 
+  // --- Header Display ---
   function drawHeader() {
-    // top timer bar
     p.fill('#e9d7c4');
     p.noStroke();
     p.rect(0, 8, p.width, 110);
@@ -38,6 +41,7 @@ registerSketch('sk4', function (p) {
     const remaining = Math.max(0, Math.ceil(totalSec - elapsed));
     p.fill('#3b2f2a');
     p.textSize(26);
+
     if (running) {
       p.text(`Cooking — ${formatTime(Math.ceil(elapsed))} elapsed • ${formatTime(remaining)} remaining`, p.width / 2, 40);
     } else {
@@ -49,84 +53,95 @@ registerSketch('sk4', function (p) {
     p.text('Flip indicator shows at halfway. Press F when you flip to mark it.', p.width / 2, 72);
   }
 
+  // --- Grill Background ---
+  function drawGrill() {
+    const spacing = 40;
+    p.stroke('#2b241f');
+    p.strokeWeight(12);
+    for (let y = 140; y < p.height; y += spacing) p.line(0, y, p.width, y);
+
+    p.stroke(255, 255, 255, 18);
+    for (let y = 140; y < p.height; y += spacing) {
+      for (let x = 0; x < p.width; x += 6) {
+        if ((x / 6 + y / spacing) % 2 === 0) p.line(x, y - 5, x, y + 5);
+      }
+    }
+    p.noStroke();
+  }
+
+  // --- Main Steak Drawing (now rectangular) ---
   function drawSteak(elapsed) {
     const cx = p.width / 2;
     const cy = p.height / 2 + 40;
-    const rx = Math.min(p.width * 0.42, 360);
-    const ry = Math.min(p.height * 0.28, 200);
+    const w = Math.min(p.width * 0.7, 680);
+    const h = Math.min(p.height * 0.35, 220);
+    const corner = 40;
 
-    // Colors
-    const searOuter = p.color('#6b3d2a'); // browned seared edge
-    const searMid = p.color('#8b4b34');
-    const rawPink = p.color('#e9928e'); // raw center
-    const cookedTan = p.color('#c17d57'); // transition
+    // Colors — vivid pink early on
+    const searOuter = p.color('#5a3324');
+    const searMid = p.color('#7a3d27');
+    const rawPink = p.color('#ffb3b0');
+    const midPink = p.color('#d9746a');
+    const cookedTan = p.color('#b56a4b');
 
-    // Doneness ratio 0..1
     const d = p.constrain(elapsed / totalSec, 0, 1);
+    const heatCurve = Math.pow(d, 1.3);
 
-    // Pink radius shrinks as doneness increases
-    const minInner = Math.min(rx, ry) * 0.02;
-    const maxInner = Math.min(rx, ry) * 0.55;
-    const innerR = p.lerp(maxInner, minInner, d);
-
-    // Draw outer seared base
-    p.noStroke();
-    // layered ellipses to simulate gradient from sear -> cooked -> pink
-    const layers = 60;
-    for (let i = 0; i <= layers; i++) {
-      const t = i / layers; // 0 outer -> 1 center
-      const lerpR = p.lerp(rx, innerR, t);
-      const lerpRy = p.lerp(ry, innerR * (ry / rx), t);
-      // pick color blending: outer->mid->center. bias center more pink while cooking diminishes pink
+    // Steak body (layered rectangles inward)
+    const layers = 50;
+    for (let i = 0; i < layers; i++) {
+      const t = i / layers;
+      const inset = t * (w * 0.4);
+      const insetY = t * (h * 0.4);
       let col;
+
       if (t < 0.5) {
         const tt = p.map(t, 0, 0.5, 0, 1);
         col = p.lerpColor(searOuter, searMid, tt);
       } else {
         const tt = p.map(t, 0.5, 1, 0, 1);
-        // as steak cooks more (d increases) shift center toward cookedTan
-        const centerTarget = p.lerpColor(rawPink, cookedTan, d);
+        const centerTarget = p.lerpColor(midPink, cookedTan, heatCurve);
         col = p.lerpColor(searMid, centerTarget, tt);
       }
+
       p.fill(col);
-      // slight surface noise to break perfect symmetry
-      const wobbleX = p.noise(i * 7, p.frameCount * 0.002) * 6 - 3;
-      const wobbleY = p.noise(i * 11, p.frameCount * 0.002) * 4 - 2;
-      p.ellipse(cx + wobbleX, cy + wobbleY, lerpR * 2, lerpRy * 2);
+      const wobbleX = p.noise(i * 5, p.frameCount * 0.002) * 6 - 3;
+      const wobbleY = p.noise(i * 8, p.frameCount * 0.002) * 4 - 2;
+      p.rect(cx - w / 2 + inset + wobbleX, cy - h / 2 + insetY + wobbleY, w - inset * 2, h - insetY * 2, corner * (1 - t));
     }
 
-    // Pink core highlight: draw a final inner ellipse representing remaining pink area
-    p.fill(p.lerpColor(rawPink, cookedTan, d));
-    p.ellipse(cx, cy, innerR * 2, innerR * (ry / rx) * 2);
+    // Center — bright pink early on
+    const innerColor = p.lerpColor(rawPink, cookedTan, heatCurve);
+    const innerInset = p.map(heatCurve, 0, 1, 0, w * 0.4);
+    p.fill(innerColor);
+    p.rect(cx - w / 2 + innerInset, cy - h / 2 + innerInset * 0.5, w - innerInset * 2, h - innerInset, corner * 0.5);
 
-    // simple grill marks (fade as it cooks)
+    // Grill marks
     p.push();
     p.translate(cx, cy);
-    p.rotate(-0.25);
-    const marks = 6;
+    p.rotate(-0.2);
+    const marks = 5;
     for (let i = -marks; i <= marks; i++) {
-      const tx = i * (rx / 6);
+      const tx = i * (w / 10);
       const markAlpha = p.map(Math.abs(i), 0, marks, 200, 40) * (1 - d * 0.9);
       p.stroke(40, markAlpha);
       p.strokeWeight(6);
-      p.line(tx, -ry * 0.9, tx, ry * 0.9);
+      p.line(tx, -h * 0.45, tx, h * 0.45);
     }
     p.pop();
 
-    // subtle sizzling dots as it cooks more
-    if (d > 0.3) {
+    // Sizzling bubbles
+    if (d > 0.1) {
       for (let s = 0; s < Math.floor(d * 30); s++) {
-        const a = p.random(p.TWO_PI);
-        const r = p.random(innerR * 0.9, rx * 0.9);
-        const sx = cx + Math.cos(a) * r * 0.6;
-        const sy = cy + Math.sin(a) * r * 0.6;
+        const sx = cx + p.random(-w * 0.4, w * 0.4);
+        const sy = cy + p.random(-h * 0.3, h * 0.3);
         p.noStroke();
         p.fill(255, 220, 160, p.random(30, 90) * d);
         p.ellipse(sx, sy, p.random(1, 4));
       }
     }
 
-    // Flip indicator if halfway reached and not yet flipped
+    // Flip Indicator
     if (elapsed >= flipSec && !flipped) {
       const flash = p.abs(Math.sin(p.millis() * 0.007));
       p.fill(255, 70, 70, 200 * flash);
@@ -143,8 +158,8 @@ registerSketch('sk4', function (p) {
     }
   }
 
+  // --- Footer Progress Bar ---
   function drawFooter(elapsed) {
-    // status bar at bottom with progress
     const px = p.width * 0.12;
     const pw = p.width * 0.76;
     const py = p.height - 66;
@@ -162,22 +177,20 @@ registerSketch('sk4', function (p) {
     p.text(`${formatTime(Math.floor(elapsed))} / ${formatTime(totalSec)} elapsed`, p.width / 2, py + h / 2);
   }
 
+  // --- Time Formatting ---
   function formatTime(s) {
     const mins = Math.floor(s / 60);
     const secs = Math.floor(s % 60);
     return `${nf(mins, 2)}:${nf(secs, 2)}`;
   }
 
-  // wrapper to match p5 instance mode nf availability
   function nf(n, d) {
     return p.nf(n, d);
   }
 
-  // Input handlers:
+  // --- Input Handlers ---
   p.keyPressed = function () {
-    // toggle run/pause on any key
     if (p.key === 'f' || p.key === 'F') {
-      // mark flipped manually
       if (getElapsedSec() >= flipSec) flipped = true;
       return;
     }
@@ -190,15 +203,12 @@ registerSketch('sk4', function (p) {
 
   function toggleRunning() {
     if (!running) {
-      // start or resume
       startMillis = p.millis();
       running = true;
     } else {
-      // pause
       elapsedOffset = getElapsedSec();
       running = false;
     }
-    // do not auto-clear flipped; user may flip manually
   }
 
   p.windowResized = function () {
